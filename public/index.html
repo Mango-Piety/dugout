@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html class="dark" lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Dugout AI — IPL Tactical Command</title>
+<meta name="description" content="Live IPL AI war room. Four AI agents react to match events in real-time."/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Archivo+Narrow:wght@400;600;700&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+  tailwind.config = {
+    darkMode: "class",
+    theme: {
+      extend: {
+        colors: {
+          "surface-dim": "#03161d",
+          "surface-container-low": "#0b1e25",
+          "surface-container": "#0f2229",
+          "surface-container-high": "#1a2c34",
+          "surface-container-highest": "#25373f",
+          "surface-bright": "#293c44",
+          "surface-variant": "#25373f",
+          "surface": "#03161d",
+          "on-surface": "#d2e6f0",
+          "on-surface-variant": "#bfcbaf",
+          "outline": "#89957b",
+          "outline-variant": "#404a35",
+          "primary": "#deffba",
+          "primary-container": "#8bf108",
+          "primary-fixed-dim": "#7fde00",
+          "on-primary": "#1c3700",
+          "on-primary-container": "#3a6900",
+          "secondary": "#74d6d6",
+          "secondary-container": "#369f9f",
+          "on-secondary": "#003737",
+          "tertiary": "#d3ffde",
+          "tertiary-fixed-dim": "#5ede95",
+          "tertiary-container": "#71f0a5",
+          "on-tertiary-container": "#006c3e",
+          "error": "#ffb4ab",
+          "background": "#005543",
+          "inverse-surface": "#d2e6f0",
+        },
+        borderRadius: { DEFAULT: "0.125rem", lg: "0.25rem", xl: "0.5rem" },
+        fontFamily: { sans: ["Archivo Narrow", "sans-serif"] },
+        fontSize: {
+          "label-md": ["10px", { lineHeight: "14px", letterSpacing: "0.1em", fontWeight: "700" }],
+          "label-lg": ["12px", { lineHeight: "16px", letterSpacing: "0.1em", fontWeight: "700" }],
+          "body-md":  ["14px", { lineHeight: "20px", letterSpacing: "0.01em", fontWeight: "400" }],
+          "body-lg":  ["16px", { lineHeight: "24px", letterSpacing: "0.01em", fontWeight: "400" }],
+          "headline-sm": ["18px", { lineHeight: "22px", letterSpacing: "0.05em", fontWeight: "600" }],
+          "headline-md": ["24px", { lineHeight: "28px", letterSpacing: "0.02em", fontWeight: "700" }],
+          "headline-lg": ["40px", { lineHeight: "44px", letterSpacing: "0.02em", fontWeight: "700" }],
+        },
+        spacing: {
+          "unit": "4px", "stack-tight": "4px", "stack-default": "12px",
+          "gutter": "16px", "section-gap": "24px",
+          "margin-mobile": "16px", "margin-desktop": "32px"
+        }
+      }
+    }
+  }
+</script>
+<style>
+  body {
+    background-color: #005543;
+    background-image: radial-gradient(circle at 2px 2px, rgba(139,241,8,0.05) 1px, transparent 0);
+    background-size: 24px 24px;
+    font-family: 'Archivo Narrow', sans-serif;
+    min-height: 100dvh;
+  }
+  .scanline {
+    width: 100%; height: 100px; z-index: 99; pointer-events: none; position: fixed;
+    background: linear-gradient(0deg, transparent 0%, rgba(139,241,8,0.08) 50%, transparent 100%);
+    bottom: 100%; animation: scanline 8s linear infinite;
+  }
+  @keyframes scanline { 0%{bottom:100%} 100%{bottom:-100px} }
+
+  .pulse-dot { animation: pulse-ring 2s cubic-bezier(0.455,0.03,0.515,0.955) infinite; }
+  @keyframes pulse-ring { 0%{transform:scale(0.7);opacity:1} 50%{transform:scale(1);opacity:0.5} 100%{transform:scale(0.7);opacity:1} }
+
+  .processing-shimmer {
+    background: linear-gradient(90deg, #0f2229 25%, #1a2c34 50%, #0f2229 75%);
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite;
+  }
+  @keyframes shimmer { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
+
+  .card-enter { animation: cardIn 0.4s ease-out forwards; }
+  @keyframes cardIn { from{opacity:0;transform:translateY(-12px)} to{opacity:1;transform:translateY(0)} }
+
+  .task-card { transition: border-color 0.2s, box-shadow 0.2s; }
+  .task-card:hover { box-shadow: 0 0 0 1px rgba(139,241,8,0.2); }
+
+  /* Kanban column scroll */
+  .kanban-col { max-height: calc(100vh - 280px); overflow-y: auto; }
+  .kanban-col::-webkit-scrollbar { width: 4px; }
+  .kanban-col::-webkit-scrollbar-track { background: transparent; }
+  .kanban-col::-webkit-scrollbar-thumb { background: #404a35; border-radius: 2px; }
+
+  /* Mobile: show only active col */
+  .mob-col { display: none; }
+  .mob-col.active { display: block; }
+
+  /* Dev panel */
+  #dev-panel { transition: max-height 0.3s ease, opacity 0.3s ease; }
+  #dev-panel.collapsed { max-height: 0; opacity: 0; overflow: hidden; }
+  #dev-panel.expanded { max-height: 200px; opacity: 1; }
+
+  /* API Config panel */
+  #api-panel { transition: max-height 0.3s ease, opacity 0.3s ease; }
+  #api-panel.collapsed { max-height: 0; opacity: 0; overflow: hidden; }
+  #api-panel.expanded { max-height: 160px; opacity: 1; }
+
+  /* NEW EVENT flash */
+  #new-event-flash { transition: opacity 0.6s ease; }
+  #new-event-flash.opacity-0 { opacity: 0; }
+  #new-event-flash.opacity-100 { opacity: 1; }
+</style>
+</head>
+<body class="dark text-on-surface antialiased overflow-x-hidden pb-20">
+<div class="scanline"></div>
+
+<!-- TOP APP BAR -->
+<header class="fixed top-0 left-0 w-full z-50 flex items-center justify-between px-4 md:px-8 h-14 bg-surface border-b border-outline-variant">
+  <div class="flex items-center gap-3">
+    <span class="material-symbols-outlined text-primary-container text-xl">terminal</span>
+    <h1 class="text-headline-sm uppercase tracking-widest text-primary-container hidden sm:block">DUGOUT AI</h1>
+    <span class="text-label-md text-on-surface-variant hidden sm:block">// IPL TACTICAL COMMAND</span>
+  </div>
+  <!-- Match display -->
+  <div class="flex items-center gap-3">
+    <div id="match-display" class="flex items-center gap-3 bg-surface-container px-3 py-1.5 border border-outline-variant">
+      <div class="flex flex-col items-end">
+        <span class="text-label-md text-on-surface-variant uppercase">LIVE MATCH</span>
+        <span id="match-score" class="text-label-lg text-primary-container uppercase font-bold">MI 151/4 <span class="text-on-surface-variant px-1">VS</span> KKR</span>
+      </div>
+      <div class="w-px h-6 bg-outline-variant"></div>
+      <div class="w-2 h-2 bg-primary-container pulse-dot rounded-full"></div>
+    </div>
+    <button id="btn-dev-toggle" class="p-1.5 hover:bg-surface-container-high border border-outline-variant transition-colors" title="Dev Trigger Panel">
+      <span class="material-symbols-outlined text-on-surface-variant text-base">bug_report</span>
+    </button>
+    <button id="btn-api-toggle" class="p-1.5 hover:bg-surface-container-high border border-secondary transition-colors" title="Configure Cricket API Key">
+      <span class="material-symbols-outlined text-secondary text-base">vpn_key</span>
+    </button>
+  </div>
+</header>
+
+<!-- DEV TRIGGER PANEL -->
+<div id="dev-panel" class="collapsed fixed top-14 left-0 w-full z-40 bg-surface-container-low border-b border-outline-variant px-4 md:px-8">
+  <div class="py-3 flex flex-wrap items-center gap-3">
+    <span class="text-label-lg text-on-surface-variant uppercase">TRIGGER EVENT:</span>
+    <select id="dev-event" class="bg-surface-container border border-outline-variant text-on-surface text-label-lg px-2 py-1 uppercase">
+      <option value="wicket">WICKET</option>
+      <option value="six">SIX</option>
+      <option value="boundary">BOUNDARY</option>
+      <option value="over">OVER COMPLETE</option>
+      <option value="momentum">MOMENTUM SHIFT</option>
+      <option value="innings">INNINGS COMPLETE</option>
+    </select>
+    <input id="dev-detail" type="text" placeholder="Event detail (optional)" class="bg-surface-container border border-outline-variant text-on-surface text-label-lg px-2 py-1 flex-1 min-w-[200px] placeholder:text-on-surface-variant"/>
+    <button id="btn-trigger" class="bg-primary-container text-on-primary-container px-4 py-1 text-label-lg uppercase font-bold hover:bg-primary-fixed-dim transition-colors">
+      FIRE EVENT
+    </button>
+    <span id="trigger-status" class="text-label-md text-on-surface-variant"></span>
+  </div>
+</div>
+
+<!-- API CONFIG PANEL -->
+<div id="api-panel" class="collapsed fixed top-14 left-0 w-full z-39 bg-surface-container-low border-b border-outline-variant px-4 md:px-8" style="top:56px;z-index:39">
+  <div class="py-3 flex flex-wrap items-center gap-3">
+    <span class="material-symbols-outlined text-secondary text-base">vpn_key</span>
+    <span class="text-label-lg text-secondary uppercase">CRICKET API KEY:</span>
+    <input id="api-key-input" type="text" placeholder="Paste your CricketData.org API key" class="bg-surface-container border border-secondary text-on-surface text-label-lg px-2 py-1 flex-1 min-w-[280px] placeholder:text-on-surface-variant font-mono"/>
+    <span class="text-label-lg text-on-surface-variant uppercase hidden sm:block">MATCH ID:</span>
+    <input id="match-id-input" type="text" placeholder="Match UUID (optional)" class="bg-surface-container border border-outline-variant text-on-surface text-label-lg px-2 py-1 w-[220px] placeholder:text-on-surface-variant font-mono"/>
+    <button id="btn-apply-api" class="bg-secondary text-on-secondary px-4 py-1 text-label-lg uppercase font-bold hover:bg-secondary-container transition-colors">
+      APPLY
+    </button>
+    <span id="api-status" class="text-label-md text-on-surface-variant"></span>
+  </div>
+  <p class="text-label-md text-on-surface-variant pb-2 opacity-60">Get a free key at <span class="text-secondary">cricketdata.org</span> — 100 req/day free tier</p>
+</div>
+
+<!-- MAIN -->
+<main id="main" class="mt-14 px-4 md:px-8 pt-4 max-w-screen-2xl mx-auto">
+
+  <!-- STATUS BAR -->
+  <div class="flex flex-wrap items-center justify-between mb-4 gap-2">
+    <div class="flex items-center gap-2 border border-primary-container bg-surface-container-low px-3 py-1">
+      <div id="live-dot" class="w-2 h-2 bg-outline pulse-dot"></div>
+      <span id="live-text" class="text-label-lg uppercase tracking-widest" style="color:#89957b">CONNECTING...</span>
+    </div>
+    <div class="flex items-center gap-3 text-label-md text-on-surface-variant uppercase">
+      <span>OPS: <span id="status-ops" class="text-primary-container">NOMINAL</span></span>
+      <span class="w-px h-3 bg-outline-variant inline-block"></span>
+      <span>LATENCY: <span id="status-latency" class="text-secondary">--MS</span></span>
+      <span class="w-px h-3 bg-outline-variant inline-block"></span>
+      <span>CLIENTS: <span id="status-clients" class="text-secondary">--</span></span>
+      <span class="w-px h-3 bg-outline-variant inline-block"></span>
+      <span>TASKS: <span id="status-tasks" class="text-on-surface">0</span></span>
+    </div>
+  </div>
+
+  <!-- NEW EVENT FLASH BANNER -->
+  <div id="new-event-flash" class="hidden opacity-0 mb-4 border-2 border-primary-container bg-surface-container-low px-4 py-3 items-center gap-3 animate-pulse">
+    <span class="material-symbols-outlined text-primary-container text-xl" style="font-variation-settings:'FILL' 1">bolt</span>
+    <span class="text-label-lg text-primary-container uppercase tracking-widest">NEW EVENT DETECTED</span>
+    <span id="new-event-text" class="text-body-md text-on-surface uppercase flex-1"></span>
+  </div>
+
+  <!-- DESKTOP: 3-col kanban headers -->
+  <div class="hidden md:grid grid-cols-3 gap-4 mb-2">
+    <div class="flex items-center justify-between border-b border-outline-variant pb-2">
+      <div class="flex items-center gap-2">
+        <div class="w-1 h-4 bg-secondary"></div>
+        <span class="text-label-lg uppercase text-on-surface-variant">TODO</span>
+      </div>
+      <span id="count-todo" class="bg-surface-container-highest text-on-surface-variant text-label-md px-2 py-0.5">0</span>
+    </div>
+    <div class="flex items-center justify-between border-b border-secondary pb-2">
+      <div class="flex items-center gap-2">
+        <div class="w-1 h-4 bg-tertiary-fixed-dim"></div>
+        <span class="text-label-lg uppercase text-tertiary-fixed-dim">PROCESSING</span>
+      </div>
+      <span id="count-processing" class="bg-surface-container-highest text-tertiary-fixed-dim text-label-md px-2 py-0.5">0</span>
+    </div>
+    <div class="flex items-center justify-between border-b border-primary-container pb-2">
+      <div class="flex items-center gap-2">
+        <div class="w-1 h-4 bg-primary-container"></div>
+        <span class="text-label-lg uppercase text-primary-container">POSTED</span>
+      </div>
+      <span id="count-posted" class="bg-primary-container text-on-primary-container text-label-md px-2 py-0.5">0</span>
+    </div>
+  </div>
+
+  <!-- MOBILE: Tab nav -->
+  <nav class="flex md:hidden w-full mb-4 border-b border-outline-variant">
+    <button data-tab="todo"       class="tab-btn flex-1 py-3 text-label-lg uppercase text-on-surface-variant hover:bg-surface-container-high transition-colors text-center">TODO</button>
+    <button data-tab="processing" class="tab-btn flex-1 py-3 text-label-lg uppercase text-on-surface-variant hover:bg-surface-container-high transition-colors text-center border-x border-outline-variant">PROCESS</button>
+    <button data-tab="posted"     class="tab-btn flex-1 py-3 text-label-lg uppercase text-on-primary-container bg-primary-container border-t-2 border-primary-fixed-dim text-center active-tab">POSTED</button>
+  </nav>
+
+  <!-- KANBAN BOARD -->
+  <div class="md:grid md:grid-cols-3 md:gap-4">
+
+    <!-- TODO col -->
+    <div id="col-todo" class="kanban-col mob-col md:block space-y-3 pr-1">
+      <div id="cards-todo" class="space-y-3"></div>
+    </div>
+
+    <!-- PROCESSING col -->
+    <div id="col-processing" class="kanban-col mob-col md:block space-y-3 pr-1">
+      <div id="cards-processing" class="space-y-3"></div>
+    </div>
+
+    <!-- POSTED col (active by default on mobile) -->
+    <div id="col-posted" class="kanban-col mob-col active md:block space-y-3 pr-1">
+      <div id="cards-posted" class="space-y-3"></div>
+    </div>
+
+  </div>
+
+  <!-- LAST EVENT BANNER -->
+  <div id="event-banner" class="hidden mt-4 border border-primary-container bg-surface-container-low px-4 py-2 flex items-center gap-3">
+    <span class="material-symbols-outlined text-primary-container text-base">bolt</span>
+    <span class="text-label-lg text-primary-container uppercase tracking-widest">LAST EVENT:</span>
+    <span id="event-banner-text" class="text-label-lg text-on-surface uppercase"></span>
+  </div>
+
+  <!-- TELEMETRY (desktop) -->
+  <div class="mt-6 hidden md:block">
+    <h3 class="text-label-lg uppercase text-on-surface-variant tracking-widest border-b border-outline-variant pb-2 mb-0">RAW_TELEMETRY_LOGS</h3>
+    <div class="flex flex-col">
+      <div class="grid grid-cols-4 px-4 py-2 bg-surface-container-highest text-label-md text-on-surface-variant uppercase">
+        <span>TIMESTAMP</span><span>AGENT_ID</span><span>PROTOCOL</span><span>PAYLOAD_STATUS</span>
+      </div>
+      <div id="telemetry-rows" class="flex flex-col"></div>
+    </div>
+  </div>
+</main>
+
+<!-- BOTTOM NAV (mobile) -->
+<nav class="fixed bottom-0 left-0 w-full z-50 flex justify-around items-center bg-surface h-14 border-t border-outline-variant md:hidden">
+  <button data-tab="todo" class="nav-btn flex flex-col items-center justify-center text-on-surface-variant px-4 py-1 hover:bg-surface-container-low active:scale-95 transition-all duration-75">
+    <span class="material-symbols-outlined text-xl">assignment</span>
+    <span class="text-label-lg uppercase mt-0.5">TODO</span>
+  </button>
+  <button data-tab="processing" class="nav-btn flex flex-col items-center justify-center text-on-surface-variant px-4 py-1 hover:bg-surface-container-low active:scale-95 transition-all duration-75">
+    <span class="material-symbols-outlined text-xl">memory</span>
+    <span class="text-label-lg uppercase mt-0.5">PROCESS</span>
+  </button>
+  <button data-tab="posted" class="nav-btn flex flex-col items-center justify-center bg-primary-container text-on-primary-container border-t-2 border-primary-fixed-dim px-4 py-1 active:scale-95 transition-all duration-75">
+    <span class="material-symbols-outlined text-xl" style="font-variation-settings:'FILL' 1">send</span>
+    <span class="text-label-lg uppercase mt-0.5">POSTED</span>
+  </button>
+  <button data-tab="agents" class="nav-btn flex flex-col items-center justify-center text-on-surface-variant px-4 py-1 hover:bg-surface-container-low active:scale-95 transition-all duration-75">
+    <span class="material-symbols-outlined text-xl">smart_toy</span>
+    <span class="text-label-lg uppercase mt-0.5">AGENTS</span>
+  </button>
+</nav>
+
+<script src="app.js"></script>
+</body>
+</html>

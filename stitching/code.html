@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>IPL Tactical Command - Dugout AI</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Archivo+Narrow:wght@400;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "secondary-fixed-dim": "#74d6d6",
+                        "surface-dim": "#03161d",
+                        "on-primary-container": "#3a6900",
+                        "secondary-fixed": "#90f3f2",
+                        "on-primary-fixed": "#0e2000",
+                        "surface-container-low": "#0b1e25",
+                        "primary-container": "#8bf108",
+                        "on-tertiary-container": "#006c3e",
+                        "primary-fixed-dim": "#7fde00",
+                        "error": "#ffb4ab",
+                        "tertiary-container": "#71f0a5",
+                        "tertiary-fixed-dim": "#5ede95",
+                        "surface-container-high": "#1a2c34",
+                        "tertiary-fixed": "#7cfbaf",
+                        "primary-fixed": "#95fc20",
+                        "on-surface": "#d2e6f0",
+                        "on-tertiary": "#00391e",
+                        "on-secondary-fixed-variant": "#004f50",
+                        "error-container": "#93000a",
+                        "outline": "#89957b",
+                        "surface": "#03161d",
+                        "on-secondary": "#003737",
+                        "outline-variant": "#404a35",
+                        "inverse-on-surface": "#21333b",
+                        "inverse-primary": "#3a6a00",
+                        "surface-variant": "#25373f",
+                        "on-secondary-container": "#002f2f",
+                        "on-tertiary-fixed": "#00210f",
+                        "inverse-surface": "#d2e6f0",
+                        "surface-container-highest": "#25373f",
+                        "tertiary": "#d3ffde",
+                        "on-primary-fixed-variant": "#2a5000",
+                        "on-error-container": "#ffdad6",
+                        "on-secondary-fixed": "#002020",
+                        "on-primary": "#1c3700",
+                        "on-error": "#690005",
+                        "surface-tint": "#7fde00",
+                        "on-background": "#d2e6f0",
+                        "primary": "#deffba",
+                        "secondary": "#74d6d6",
+                        "on-surface-variant": "#bfcbaf",
+                        "surface-container-lowest": "#001017",
+                        "on-tertiary-fixed-variant": "#00522e",
+                        "background": "#005543",
+                        "secondary-container": "#369f9f",
+                        "surface-bright": "#293c44",
+                        "surface-container": "#0f2229"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.125rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "0.75rem"
+                    },
+                    "spacing": {
+                        "stack-tight": "4px",
+                        "section-gap": "24px",
+                        "gutter": "16px",
+                        "margin-mobile": "16px",
+                        "margin-desktop": "32px",
+                        "stack-default": "12px",
+                        "unit": "4px"
+                    },
+                    "fontFamily": {
+                        "body-md": ["Archivo Narrow"],
+                        "headline-lg-mobile": ["Archivo Narrow"],
+                        "body-lg": ["Archivo Narrow"],
+                        "headline-lg": ["Archivo Narrow"],
+                        "headline-sm": ["Archivo Narrow"],
+                        "label-md": ["Archivo Narrow"],
+                        "headline-md": ["Archivo Narrow"],
+                        "label-lg": ["Archivo Narrow"]
+                    },
+                    "fontSize": {
+                        "body-md": ["14px", {"lineHeight": "20px", "letterSpacing": "0.01em", "fontWeight": "400"}],
+                        "headline-lg-mobile": ["32px", {"lineHeight": "36px", "letterSpacing": "0.02em", "fontWeight": "700"}],
+                        "body-lg": ["16px", {"lineHeight": "24px", "letterSpacing": "0.01em", "fontWeight": "400"}],
+                        "headline-lg": ["40px", {"lineHeight": "44px", "letterSpacing": "0.02em", "fontWeight": "700"}],
+                        "headline-sm": ["18px", {"lineHeight": "22px", "letterSpacing": "0.05em", "fontWeight": "600"}],
+                        "label-md": ["10px", {"lineHeight": "14px", "letterSpacing": "0.1em", "fontWeight": "700"}],
+                        "headline-md": ["24px", {"lineHeight": "28px", "letterSpacing": "0.02em", "fontWeight": "700"}],
+                        "label-lg": ["12px", {"lineHeight": "16px", "letterSpacing": "0.1em", "fontWeight": "700"}]
+                    }
+                },
+            },
+        }
+    </script>
+<style>
+        body {
+            background-color: #005543;
+            background-image: radial-gradient(circle at 2px 2px, rgba(139, 241, 8, 0.05) 1px, transparent 0);
+            background-size: 24px 24px;
+            font-family: 'Archivo Narrow', sans-serif;
+        }
+        .scanline {
+            width: 100%;
+            height: 100px;
+            z-index: 99;
+            background: linear-gradient(0deg, rgba(0, 0, 0, 0) 0%, rgba(139, 241, 8, 0.1) 50%, rgba(0, 0, 0, 0) 100%);
+            opacity: 0.1;
+            position: fixed;
+            bottom: 100%;
+            pointer-events: none;
+            animation: scanline 8s linear infinite;
+        }
+        @keyframes scanline {
+            0% { bottom: 100%; }
+            100% { bottom: -100px; }
+        }
+        .pulse-dot {
+            animation: pulse-ring 2s cubic-bezier(0.455, 0.03, 0.515, 0.955) infinite;
+        }
+        @keyframes pulse-ring {
+            0% { transform: scale(0.7); opacity: 1; }
+            50% { transform: scale(1); opacity: 0.5; }
+            100% { transform: scale(0.7); opacity: 1; }
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="dark text-on-surface antialiased overflow-x-hidden pb-20">
+<div class="scanline"></div>
+<!-- TopAppBar -->
+<header class="fixed top-0 left-0 w-full z-50 flex items-center justify-between px-margin-mobile md:px-margin-desktop h-16 bg-surface dark:bg-surface border-b border-outline-variant dark:border-outline-variant">
+<div class="flex items-center gap-stack-default">
+<span class="material-symbols-outlined text-primary dark:text-primary-fixed" data-icon="terminal">terminal</span>
+<h1 class="font-headline-sm text-headline-sm uppercase tracking-widest text-primary dark:text-primary-fixed">IPL TACTICAL COMMAND</h1>
+</div>
+<div class="hidden md:flex items-center gap-gutter bg-surface-container px-4 py-2 border border-outline-variant">
+<div class="flex flex-col items-end">
+<span class="text-label-md font-label-md uppercase text-on-surface-variant">CURRENT MATCH</span>
+<span class="text-label-lg font-label-lg uppercase text-primary">MI 151/4 <span class="text-on-surface-variant px-1">VS</span> KKR</span>
+</div>
+<div class="w-px h-8 bg-outline-variant"></div>
+<button class="hover:bg-surface-container-high dark:hover:bg-surface-container-high transition-colors active:opacity-80 transition-all duration-100 p-2">
+<span class="material-symbols-outlined text-primary dark:text-primary-fixed" data-icon="settings_input_antenna">settings_input_antenna</span>
+</button>
+</div>
+<div class="md:hidden flex items-center">
+<span class="text-label-lg font-label-lg uppercase text-primary">MI 151/4</span>
+</div>
+</header>
+<main class="mt-16 p-gutter md:p-margin-desktop max-w-7xl mx-auto">
+<!-- Sub-header Protocols -->
+<div class="flex flex-wrap items-center justify-between mb-section-gap gap-stack-default">
+<div class="flex items-center gap-stack-tight border border-primary-container bg-surface-container-low px-3 py-1">
+<div class="w-2 h-2 bg-primary-container pulse-dot"></div>
+<span class="font-label-lg text-label-lg uppercase tracking-widest text-primary-container">LIVE DATA INGESTION</span>
+</div>
+<div class="flex items-center gap-stack-tight">
+<span class="font-label-md text-label-md uppercase text-on-surface-variant">OPS STATUS:</span>
+<span class="font-label-md text-label-md uppercase text-primary-container">NOMINAL</span>
+<span class="font-label-md text-label-md uppercase text-on-surface-variant ml-4">LATENCY:</span>
+<span class="font-label-md text-label-md uppercase text-secondary">24MS</span>
+</div>
+</div>
+<!-- Workflow Navigation -->
+<nav class="flex w-full mb-section-gap border-b border-outline-variant">
+<button class="flex-1 py-4 font-label-lg text-label-lg uppercase text-on-surface-variant hover:bg-surface-container-high transition-colors text-center">TODO</button>
+<button class="flex-1 py-4 font-label-lg text-label-lg uppercase text-on-surface-variant hover:bg-surface-container-high transition-colors text-center border-x border-outline-variant">PROCESS</button>
+<button class="flex-1 py-4 font-label-lg text-label-lg uppercase text-on-primary-container bg-primary-container border-t-2 border-primary-fixed-dim text-center">POSTED</button>
+</nav>
+<!-- Tactical Feed Header -->
+<div class="flex items-center justify-between mb-stack-default">
+<div class="flex items-center gap-stack-tight">
+<div class="w-1 h-6 bg-primary-container"></div>
+<h2 class="font-headline-md text-headline-md uppercase tracking-tight">TACTICAL FEED</h2>
+</div>
+<button class="border border-outline px-3 py-1 font-label-md text-label-md uppercase hover:bg-surface-container-high transition-colors">REFRESH_LOGS</button>
+</div>
+<!-- Feed Grid -->
+<div class="grid grid-cols-1 md:grid-cols-2 gap-gutter">
+<!-- Meme Agent Card -->
+<div class="bg-surface-container border border-primary-container p-gutter relative overflow-hidden group">
+<div class="absolute top-0 right-0 p-2 opacity-20">
+<span class="material-symbols-outlined text-4xl" data-icon="sentiment_very_dissatisfied">sentiment_very_dissatisfied</span>
+</div>
+<div class="flex flex-col gap-stack-tight relative z-10">
+<div class="flex justify-between items-center">
+<span class="font-label-md text-label-md uppercase text-primary-container">MEME AGENT // v2.4</span>
+<span class="font-label-md text-label-md uppercase text-on-surface-variant">02:14s AGO</span>
+</div>
+<div class="w-full h-px bg-outline-variant my-1"></div>
+<p class="font-body-lg text-body-lg text-on-surface leading-tight">
+                        "MI ka middle order toh loading screen pe hi reh gaya <span class="text-primary-container">💀</span>"
+                    </p>
+<div class="mt-stack-default flex gap-stack-tight">
+<div class="bg-primary-container text-on-primary-container px-2 py-px text-label-md font-label-md">CRITICAL ROAST</div>
+<div class="border border-outline-variant text-on-surface-variant px-2 py-px text-label-md font-label-md uppercase">VIRAL_POTENTIAL: HIGH</div>
+</div>
+</div>
+<div class="absolute bottom-0 left-0 h-1 bg-primary-container w-0 group-hover:w-full transition-all duration-700"></div>
+</div>
+<!-- Hype Agent Card -->
+<div class="bg-surface-container border border-secondary p-gutter relative overflow-hidden group">
+<div class="absolute top-0 right-0 p-2 opacity-20">
+<span class="material-symbols-outlined text-4xl" data-icon="local_fire_department">local_fire_department</span>
+</div>
+<div class="flex flex-col gap-stack-tight relative z-10">
+<div class="flex justify-between items-center">
+<span class="font-label-md text-label-md uppercase text-secondary">HYPE AGENT // v1.0</span>
+<span class="font-label-md text-label-md uppercase text-on-surface-variant">04:45s AGO</span>
+</div>
+<div class="w-full h-px bg-outline-variant my-1"></div>
+<p class="font-headline-sm text-headline-sm uppercase text-on-surface tracking-tighter italic">
+                        EDEN GARDENS <span class="text-secondary">PURE CHAOS MODE</span> MEIN <span class="inline-block animate-bounce">🔥</span>
+</p>
+<div class="mt-stack-default flex gap-stack-tight">
+<div class="bg-secondary text-on-secondary px-2 py-px text-label-md font-label-md">MAX ENERGY</div>
+<div class="border border-outline-variant text-on-surface-variant px-2 py-px text-label-md font-label-md uppercase">ENGAGEMENT_SPIKE: 400%</div>
+</div>
+</div>
+</div>
+<!-- Stats Agent Card -->
+<div class="bg-surface-container border border-outline-variant p-gutter relative overflow-hidden">
+<div class="flex flex-col gap-stack-tight">
+<div class="flex justify-between items-center">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-primary text-sm" data-icon="analytics">analytics</span>
+<span class="font-label-md text-label-md uppercase text-on-surface-variant">STATS AGENT // ANALYTIC_UNIT_7</span>
+</div>
+<span class="font-label-md text-label-md uppercase text-on-surface-variant">08:12s AGO</span>
+</div>
+<div class="w-full h-px bg-outline-variant my-1"></div>
+<p class="font-body-md text-body-md text-on-surface border-l-2 border-primary pl-3 py-1 bg-surface-container-low">
+                        Russell ka death overs strike rate iss season <span class="text-primary font-bold">220+</span> hai. MI needs wide yorkers.
+                    </p>
+<div class="grid grid-cols-3 gap-2 mt-2">
+<div class="border border-outline-variant p-1 text-center">
+<div class="text-label-md text-on-surface-variant uppercase">SR</div>
+<div class="text-label-lg font-bold">224.1</div>
+</div>
+<div class="border border-outline-variant p-1 text-center">
+<div class="text-label-md text-on-surface-variant uppercase">AVG</div>
+<div class="text-label-lg font-bold text-primary">42.5</div>
+</div>
+<div class="border border-outline-variant p-1 text-center">
+<div class="text-label-md text-on-surface-variant uppercase">6s</div>
+<div class="text-label-lg font-bold">18</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Prediction Agent Card -->
+<div class="bg-surface-container border border-tertiary-fixed-dim p-gutter relative overflow-hidden group">
+<div class="absolute inset-0 bg-tertiary-fixed-dim opacity-5 pointer-events-none"></div>
+<div class="flex flex-col gap-stack-tight relative z-10">
+<div class="flex justify-between items-center">
+<span class="font-label-md text-label-md uppercase text-tertiary-fixed-dim">PREDICTION AGENT // QUANTUM_FLUX</span>
+<span class="font-label-md text-label-md uppercase text-on-surface-variant">12:30s AGO</span>
+</div>
+<div class="w-full h-px bg-outline-variant my-1"></div>
+<div class="flex items-end gap-2 py-2">
+<span class="text-headline-lg font-headline-lg leading-none text-tertiary-fixed-dim">72%</span>
+<p class="font-body-md text-body-md text-on-surface pb-1">
+                            KKR Win Probability <span class="text-tertiary-fixed-dim">shift detected</span>.
+                        </p>
+</div>
+<div class="h-2 w-full bg-surface-container-highest overflow-hidden">
+<div class="h-full bg-tertiary-fixed-dim w-[72%] transition-all duration-1000 ease-out"></div>
+</div>
+<div class="mt-stack-default flex justify-between items-center">
+<span class="font-label-md text-label-md uppercase text-on-surface-variant italic">CONFIDENCE_INTERVAL: 0.88</span>
+<span class="material-symbols-outlined text-tertiary-fixed-dim text-sm" data-icon="trending_up">trending_up</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Telemetry List (Desktop Enrichment) -->
+<div class="mt-section-gap hidden md:block">
+<h3 class="font-label-lg text-label-lg uppercase mb-4 text-on-surface-variant tracking-widest border-b border-outline-variant pb-2">RAW_TELEMETRY_LOGS</h3>
+<div class="flex flex-col">
+<div class="grid grid-cols-4 px-4 py-2 bg-surface-container-highest font-label-md text-label-md text-on-surface-variant">
+<span>TIMESTAMP</span>
+<span>AGENT_ID</span>
+<span>PROTOCOL</span>
+<span>PAYLOAD_STATUS</span>
+</div>
+<div class="grid grid-cols-4 px-4 py-3 border-b border-outline-variant hover:bg-primary-container/10 transition-colors cursor-crosshair">
+<span class="font-body-md text-label-md opacity-70">21:44:12.44</span>
+<span class="font-label-md text-primary">MEME_04</span>
+<span class="font-label-md">HTTPS_POST</span>
+<span class="font-label-md text-primary-container">SUCCESS</span>
+</div>
+<div class="grid grid-cols-4 px-4 py-3 border-b border-outline-variant hover:bg-primary-container/10 transition-colors cursor-crosshair">
+<span class="font-body-md text-label-md opacity-70">21:44:10.02</span>
+<span class="font-label-md text-secondary">HYPE_01</span>
+<span class="font-label-md">UDP_STREAM</span>
+<span class="font-label-md text-primary-container">SUCCESS</span>
+</div>
+<div class="grid grid-cols-4 px-4 py-3 border-b border-outline-variant hover:bg-primary-container/10 transition-colors cursor-crosshair">
+<span class="font-body-md text-label-md opacity-70">21:44:08.91</span>
+<span class="font-label-md text-tertiary-fixed-dim">PRED_09</span>
+<span class="font-label-md">WEBSOCKET</span>
+<span class="font-label-md text-secondary">PENDING</span>
+</div>
+</div>
+</div>
+</main>
+<!-- BottomNavBar -->
+<nav class="fixed bottom-0 left-0 w-full z-50 flex justify-around items-center bg-surface dark:bg-surface h-16 px-gutter border-t border-outline-variant dark:border-outline-variant">
+<button class="flex flex-col items-center justify-center text-on-surface-variant dark:text-on-surface-variant px-4 py-1 hover:bg-surface-container-low transition-all active:scale-95 duration-75">
+<span class="material-symbols-outlined" data-icon="assignment">assignment</span>
+<span class="font-label-lg text-label-lg uppercase mt-1">TODO</span>
+</button>
+<button class="flex flex-col items-center justify-center text-on-surface-variant dark:text-on-surface-variant px-4 py-1 hover:bg-surface-container-low transition-all active:scale-95 duration-75">
+<span class="material-symbols-outlined" data-icon="memory">memory</span>
+<span class="font-label-lg text-label-lg uppercase mt-1">PROCESS</span>
+</button>
+<button class="flex flex-col items-center justify-center bg-primary-container dark:bg-primary-container text-on-primary-container dark:text-on-primary-container rounded-none border-t-2 border-primary-fixed-dim px-4 py-1 transition-all active:scale-95 duration-75">
+<span class="material-symbols-outlined" data-icon="send" style="font-variation-settings: 'FILL' 1;">send</span>
+<span class="font-label-lg text-label-lg uppercase mt-1">POSTED</span>
+</button>
+<button class="flex flex-col items-center justify-center text-on-surface-variant dark:text-on-surface-variant px-4 py-1 hover:bg-surface-container-low transition-all active:scale-95 duration-75">
+<span class="material-symbols-outlined" data-icon="smart_toy">smart_toy</span>
+<span class="font-label-lg text-label-lg uppercase mt-1">AGENTS</span>
+</button>
+</nav>
+<script>
+        // Micro-interaction for the data ingestion pulse
+        document.addEventListener('DOMContentLoaded', () => {
+            const logs = document.querySelectorAll('.cursor-crosshair');
+            logs.forEach(log => {
+                log.addEventListener('click', () => {
+                    log.classList.add('bg-primary-container/20');
+                    setTimeout(() => {
+                        log.classList.remove('bg-primary-container/20');
+                    }, 200);
+                });
+            });
+        });
+    </script>
+</body></html>
